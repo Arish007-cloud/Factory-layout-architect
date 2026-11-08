@@ -239,8 +239,15 @@ if(typeof location!=='undefined'&&new URLSearchParams(location.search).get('play
 
 function isExpandedPlant(){return nodes.some(n=>n.bank==='left')&&nodes.some(n=>n.bank==='right')}
 function worldWidth(){return isExpandedPlant()?2200:1100}
-function loadPlant4(){stopFlowPlayback();loadPlant4Base();const right=nodes.map(n=>({...n,x:n.x+950,bank:'right'}));const left=right.map(n=>({...n,id:nextId++,x:2200-n.x-n.w,name:/^Knitting line/.test(n.name)?'Knitting line '+(9-Number(n.name.match(/\d+$/)[0])):n.name,bank:'left',batches:[]}));nodes=[...left,...right];plantView='overview';selectPlantRoute(1);properties()}
-function plantRoutePoints(a,b){if(!isExpandedPlant())return plantLocalRoutePoints(a,b);const bank=a.bank||b.bank;const local=n=>({...n,x:bank==='left'?2200-n.x-n.w-950:n.x-950});return plantLocalRoutePoints(local(a),local(b)).map(p=>({x:bank==='left'?2200-p.x-950:p.x+950,y:p.y}))}
+function loadPlant4(){stopFlowPlayback();loadPlant4Base();const right=nodes.map(n=>({...n,x:n.x+950,bank:'right'}));const left=right.map(n=>({...n,id:nextId++,x:['Triveneta dryer','HS Ghibli','Packing table','Complete carton'].includes(n.name)?n.x-950:2200-n.x-n.w,name:/^Knitting line/.test(n.name)?'Knitting line '+(9-Number(n.name.match(/\d+$/)[0])):n.name,bank:'left',batches:[]}));nodes=[...left,...right];plantView='overview';selectPlantRoute(1);properties()}
+function plantRoutePoints(a,b){if(!isExpandedPlant())return plantLocalRoutePoints(a,b);const p=xy(a),q=xy(b),P=(x,y)=>({x,y});
+ if(/^Knitting line/.test(a.name))return [P(p.x,a.y+a.h),P(p.x,250),P(1100,250),P(1100,425),P(q.x,425),P(q.x,b.type==='wip'?b.y+b.h:b.y)];
+ if(a.name==='Unassorted area')return [P(p.x,a.y+a.h),P(p.x,425),P(q.x,425),P(q.x,b.y)];
+ if(a.name==='Triveneta dryer'||a.name==='HS Ghibli')return [P(a.x,p.y),P(b.x+b.w,p.y),P(b.x+b.w,q.y)];
+ if(a.name==='Packing table'&&b.name==='Complete carton')return [P(a.x,p.y),P(b.x+b.w,q.y)];
+ if(a.name==='Packing table')return [P(p.x,a.y),P(p.x,425),P(q.x,425),P(q.x,b.y+b.h)];
+ if(a.name==='Complete carton')return [P(p.x,a.y),P(p.x,425),P(q.x,425),P(q.x,b.y+b.h)];
+ return [p,q];}
 function setPlantView(v){plantView=v;applyPlantView()}
 function applyPlantView(){const box=!isExpandedPlant()?'0 0 1100 700':plantView==='left'?'135 0 1030 700':plantView==='right'?'1035 0 1030 700':'150 0 1900 700';$('floor').setAttribute('viewBox',box)}
 function drawExpandedPlantBuilding(b){
