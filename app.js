@@ -37,10 +37,11 @@ function showText(){$('modal-action').textContent='Generate Editable Layout';$('
 for(const id of ['shift','transport'])$(id).addEventListener('change',()=>{const input=$(id),v=Number(input.value);input.value=Number.isFinite(v)?Math.max(id==='shift'?.1:1,Math.min(id==='shift'?24:100000,v)):(id==='shift'?8:30);resetSim();persist()});
 $('modal').addEventListener('click',e=>{if(e.target===$('modal'))closeModal()});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeModal()});
 function label(parent,x,y,text,size=12,color='#28445d',weight=500){const t=el('text',{x,y,'text-anchor':'middle','font-size':size,fill:color,'font-weight':weight},parent);t.textContent=text;return t}
-function drawBuilding(){const b=$('building');if(!b)return;b.replaceChildren();
+function drawBuilding(){if($('floor-title'))$('floor-title').textContent=isTextile()?'Textile factory · Knitting / Processing / Finishing':'Production floor · Stock & lag demo';const b=$('building');if(!b)return;b.replaceChildren();
  el('rect',{x:20,y:28,width:1060,height:640,rx:12,fill:'#f8fafc',stroke:'#486478','stroke-width':5},b);
  for(let x=40;x<1080;x+=20)el('path',{d:'M'+x+' 32V664',stroke:'#e5ecf1','stroke-width':.6},b);
  for(let y=48;y<668;y+=20)el('path',{d:'M24 '+y+'H1076',stroke:'#e5ecf1','stroke-width':.6},b);
+ if(isTextile()){drawTextileZones(b);return;}
  el('rect',{x:35,y:326,width:1030,height:72,fill:'#e5eaf0'},b);
  el('path',{d:'M40 362H1060',stroke:'#f3b936','stroke-width':3,'stroke-dasharray':'18 10'},b);
  label(b,550,352,'MATERIAL HANDLING AISLE · KEEP CLEAR',13,'#65788b',700);
@@ -65,13 +66,27 @@ function drawEquipment(g,n,fill,stroke){
  }else{
   const count=Math.min(4,Math.max(1,Math.round(n.count)));const width=145/count;
   for(let i=0;i<count;i++){const x=28+i*width;
+   if(/knit/i.test(n.name)){
+    el('rect',{x:x+3,y:77,width:width-13,height:25,rx:4,fill:'#408bb8',stroke:'#235c7f'},c);
+    el('ellipse',{cx:x+(width-7)/2,cy:72,rx:(width-15)/2,ry:15,fill:'#b9dce7',stroke:'#235c7f','stroke-width':2},c);
+    for(let j=0;j<6;j++)el('path',{d:'M'+(x+8+j*(width-22)/5)+' 67v-17',stroke:'#577a8d','stroke-width':1.7},c);
+    el('path',{d:'M'+(x+width/2-8)+' 42l5-13h8l5 13Z',fill:'#d4a3cf',stroke:'#8b6494'},c);
+   }else if(/dye|wash/i.test(n.name)){
+    el('rect',{x,y:43,width:width-7,height:60,rx:7,fill:'#8e9dd0',stroke:'#546395'},c);
+    el('circle',{cx:x+(width-7)/2,cy:72,r:Math.min(23,(width-17)/2),fill:'#d5e5f3',stroke:'#546395','stroke-width':4},c);
+    el('path',{d:'M'+(x+8)+' 76h'+(width-23),stroke:'#548ecb','stroke-width':4},c);
+   }else if(/finish|dryer/i.test(n.name)){
+    el('rect',{x,y:46,width:width-7,height:53,rx:5,fill:'#45a587',stroke:'#22765e'},c);
+    for(let j=0;j<3;j++)el('rect',{x:x+5,y:52+j*14,width:width-17,height:9,rx:4,fill:'#ccece0',stroke:'#22765e'},c);
+   }else{
    el('rect',{x,y:44,width:width-7,height:48,rx:4,fill:n.type==='station'?'#43a884':'#3b82b4',stroke:'#1b567a'},c);
    el('rect',{x:x+6,y:50,width:width-19,height:22,rx:2,fill:'#c8e9f2',stroke:'#245a75'},c);
    el('circle',{cx:x+10,cy:82,r:3,fill:running?'#93eea9':'#f9c95d'},c);
    el('rect',{x:x+5,y:94,width:6,height:10,fill:'#496574'},c);el('rect',{x:x+width-18,y:94,width:6,height:10,fill:'#496574'},c);
+   }
   }
   label(c,100,123,n.count+' machines · '+n.ct+' sec/unit',12,'#245b7a',800);
-  label(c,100,143,Math.round(n.qty)+' units at station · '+Math.floor(n.processed)+' processed',11,'#486b7e',600);
+  label(c,100,143,Math.round(n.qty)+' units at station · '+Math.floor(n.processed)+' processed',11,'#486b7e',600);if(n.delay)label(c,100,156,(n.delay/60)+' h process hold',10,'#815b9d',700);
  }
 }
 function loadFactoryDemo(){
@@ -86,3 +101,24 @@ function loadFactoryDemo(){
 }
 
 if(typeof localStorage!=='undefined'){try{if(!localStorage.getItem('factory-layout-v3'))loadFactoryDemo()}catch{}}
+
+function isTextile(){return nodes.some(n=>/knitting/i.test(n.name))&&nodes.some(n=>/dyeing/i.test(n.name))}
+function drawTextileZones(b){
+ const zones=[{x:38,c:'#edf5fc',title:'01  KNITTING HALL',sub:'YARN → KNITTING → GREIGE STOCK'},{x:418,c:'#f1eef9',title:'02  PROCESSING',sub:'DYEING / WASH → DRYING → HOLD'},{x:798,c:'#edf8f2',title:'03  FINISHING',sub:'FINISH / INSPECT → STOCK → DISPATCH'}];
+ for(const z of zones){el('rect',{x:z.x,y:72,width:264,height:565,rx:8,fill:z.c,stroke:'#cbd9e4','stroke-dasharray':'5 4'},b);label(b,z.x+132,92,z.title,15,'#214760',800);label(b,z.x+132,653,z.sub,9,'#627b8c',700)}
+ for(const x of [340,720]){el('rect',{x,y:72,width:40,height:565,fill:'#e1e7ed'},b);el('path',{d:'M'+(x+20)+' 78V632',stroke:'#e3b43a','stroke-width':2,'stroke-dasharray':'12 9'},b)}
+ label(b,550,56,'TEXTILE FACTORY — MATERIAL FLOW LAYOUT',17,'#183850',800);
+}
+function loadTextileDemo(){
+ nextId=1;nodes=[
+ node('wip','Yarn stock',70,112,{w:200,h:140,initial:240,capacity:240}),
+ node('machine','Circular knitting',70,297,{w:200,h:140,count:4,ct:120,capacity:24}),
+ node('wip','Greige buffer',70,482,{w:200,h:140,delay:30,capacity:60}),
+ node('machine','Dyeing & washing',450,482,{w:200,h:140,count:2,ct:180,delay:60,capacity:36}),
+ node('machine','Hydro / dryer',450,297,{w:200,h:140,count:2,ct:120,delay:15,capacity:24}),
+ node('wip','Processed buffer',450,112,{w:200,h:140,delay:30,capacity:48}),
+ node('machine','Finishing / inspect',830,112,{w:200,h:140,count:3,ct:120,capacity:24}),
+ node('wip','Finished stock',830,297,{w:200,h:140,delay:15,capacity:60}),
+ node('station','Pack & dispatch',830,482,{w:200,h:140,count:2,ct:90,capacity:24})
+ ];links=nodes.slice(1).map((n,i)=>({from:nodes[i].id,to:n.id}));selected=null;$('shift').value=8;$('transport').value=20;$('speed').value=.3;properties();resetSim();persist();
+}

@@ -4,6 +4,8 @@ A browser-based factory layout editor and deterministic flow simulator. No insta
 
 ## Features
 
+- Textile factory demo: knitting hall, dyeing/washing and drying area, finishing and inspection area, linked greige/processed/finished stock buffers, editable processing lags, and dispatch. Machine illustrations distinguish knitting heads, dyeing drums, and finishing rollers. Demo operating values are illustrative; the model treats material as equivalent units, without yarn-to-fabric mass conversion or process loss.
+
 - Place, drag, duplicate, edit, and delete machines, workstations, buffers, and conveyors.
 - Connect operations and remove individual routes from object properties.
 - Configure cycle times, parallel equipment, starting WIP, hold delays, buffer limits, transport speed, and shift length.
