@@ -4,6 +4,8 @@ A browser-based factory layout editor and deterministic flow simulator. No insta
 
 ## Features
 
+- Expanded Plant 4: equal left and right equipment banks share one central aisle. Knitting lines 1–4 occupy the left bank and lines 5–8 the right. Each bank has its own unassorted, short-carton, and leftover stock locations, Triveneta dryer, HS Ghibli, packing table, and complete-carton store. Routes and looping playback run on both banks. Whole-floor and individual-bank views preserve editable full-size footprints.
+
 - Continuous flow playback: a large highlighted trolley traverses the selected Plant 4 route and repeats until paused. Stops use compressed illustrative timing; production counters remain unchanged. Use the separate numeric model for capacity, stock, and lead-time calculations.
 
 - Plant 4 reference layout: knitting lines 5–8, knitting boundary wall, central and material movement aisles, unassorted/short-carton/leftover stock areas, Triveneta dryer, HS Ghibli finishing, packing, and complete cartons. Four selectable material-flow scenarios follow aisle-based polylines; route lengths and moving material use the same paths. Video stock figures are reference location counts, not verified buffer capacities or unit conversions. Dimensions, cycle times, batch sizes, and delays are illustrative pending engineering data.
