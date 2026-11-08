@@ -9,6 +9,7 @@ function app(){
  get('shift').value='8';get('transport').value='30';get('speed').value='6';
  const context=vm.createContext({document:{getElementById:get,createElementNS:element,createElement:element,querySelectorAll:()=>[],addEventListener(){}},localStorage:{getItem(){return null},setItem(){}},clearInterval(){},setInterval(){return 1},setTimeout(){},alert(){},Blob,URL,console});
  vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'../app.js'),'utf8'),context);
+ vm.runInContext("seed();$('shift').value=8",context);
  return code=>vm.runInContext(code,context);
 }
 test('sample simulates a full shift without losing material',()=>{const run=app();run('for(let i=0;i<4800;i++)step(.1)');assert.ok(run('completed')>1000);assert.ok(Math.abs(run('simTime')-480)<1e-6);assert.ok(Math.abs(run('nodes.reduce((s,n)=>s+n.qty,0)+transit.reduce((s,t)=>s+t.qty,0)+completed')-3000)<1e-6)});
@@ -20,3 +21,4 @@ test('text parser recognizes counts and cycle times',()=>{const run=app();run("$
 test('validation rejects corrupt projects before altering existing model',()=>{const run=app();assert.throws(()=>run("applyProject({version:1,nodes:[{id:1}],links:[]})"));assert.equal(run('nodes.length'),4);run('const d=projectData();d.links[0].to=999');assert.throws(()=>run('applyProject(d)'));assert.equal(run('nodes.length'),4)});
 test('project roundtrip preserves operating parameters',()=>{const run=app();const before=run('JSON.stringify(projectData())');run('applyProject(projectData())');assert.equal(run('JSON.stringify(projectData())'),before)});
 test('shift stops at requested duration',()=>{const run=app();run("$('shift').value='.1';for(let i=0;i<100;i++)step(.1)");assert.ok(Math.abs(run('simTime')-6)<1e-8)});
+test('stock demo holds material for an hour and conserves all 240 units',()=>{const run=app();run('loadFactoryDemo();for(let i=0;i<600;i++)step(.1)');assert.equal(run('completed'),0);assert.ok(run('nodes[2].qty')>100);run('for(let i=0;i<1800;i++)step(.1)');assert.ok(run('completed')>100);assert.ok(Math.abs(run('completed+nodes.reduce((s,n)=>s+n.qty,0)+transit.reduce((s,t)=>s+t.qty,0)')-240)<1e-6)});
