@@ -4,7 +4,7 @@ A browser-based factory layout editor and deterministic flow simulator. No insta
 
 ## Features
 
-- Machine-cell extension only: the lines 1–4 cost centre has two processing/boarding/packing sets; the lines 5–8 cost centre has four sets. The original eight knitting lines and eight stock locations are retained. Added cells return to the existing stock areas through aisle routes. The floor extends downward, with whole-floor, cost-centre, top-floor, and individual-cell views. Six simultaneous looping flows illustrate the six cells.
+- The lines 1–4 cost centre has two processing/boarding/packing sets; the lines 5–8 cost centre has four sets. Each of the six cells has its own completion pallet immediately after packing. The eight knitting lines and six unassorted/short-carton/leftover locations are retained. Short-carton and leftover routes continue from each cell's completion pallet through the aisle. The floor extends downward, with whole-floor, cost-centre, top-floor, and individual-cell views. Six simultaneous looping flows illustrate the six cells.
 
 - Expanded Plant 4: equal left and right equipment banks share one central aisle. Knitting lines 1–4 occupy the left bank and lines 5–8 the right. Each bank has its own unassorted, short-carton, and leftover stock locations, Triveneta dryer, HS Ghibli, packing table, and complete-carton store. Routes and looping playback run on both banks. Whole-floor and individual-bank views preserve editable full-size footprints.
 
