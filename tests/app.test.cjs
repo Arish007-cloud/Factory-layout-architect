@@ -1,0 +1,22 @@
+const {test}=require('node:test');
+const assert=require('node:assert/strict');
+const vm=require('node:vm');
+const fs=require('node:fs');
+function app(){
+ const elements=new Map();
+ function element(){return {value:'',textContent:'',style:{},dataset:{},classList:{add(){},remove(){},toggle(){}},addEventListener(){},setAttribute(){},appendChild(){},replaceChildren(){},click(){}}}
+ const get=id=>{if(!elements.has(id))elements.set(id,element());return elements.get(id)};
+ get('shift').value='8';get('transport').value='30';get('speed').value='6';
+ const context=vm.createContext({document:{getElementById:get,createElementNS:element,createElement:element,querySelectorAll:()=>[],addEventListener(){}},localStorage:{getItem(){return null},setItem(){}},clearInterval(){},setInterval(){return 1},setTimeout(){},alert(){},Blob,URL,console});
+ vm.runInContext(fs.readFileSync(require('node:path').join(__dirname,'../app.js'),'utf8'),context);
+ return code=>vm.runInContext(code,context);
+}
+test('sample simulates a full shift without losing material',()=>{const run=app();run('for(let i=0;i<4800;i++)step(.1)');assert.ok(run('completed')>1000);assert.ok(Math.abs(run('simTime')-480)<1e-6);assert.ok(Math.abs(run('nodes.reduce((s,n)=>s+n.qty,0)+transit.reduce((s,t)=>s+t.qty,0)+completed')-3000)<1e-6)});
+test('new and duplicate nodes can run immediately',()=>{const run=app();run("nodes.push(node('machine','New',0,0));selected=nodes[0].id;duplicateSelected();step(.1)");assert.equal(run('nodes.every(n=>Array.isArray(n.batches))'),true)});
+test('finite destination capacity blocks upstream and includes reservations',()=>{const run=app();run("nodes=[node('machine','Source',0,0,{count:100}),node('wip','Buffer',200,0,{capacity:3,delay:100})];links=[{from:nodes[0].id,to:nodes[1].id}];resetSim();for(let i=0;i<300;i++)step(.1)");assert.ok(run('nodes[1].qty+transit.filter(t=>t.to===nodes[1].id).reduce((s,t)=>s+t.qty,0)')<=3+1e-8);assert.ok(run('nodes[0].qty')>0)});
+test('cycle time prevents instantaneous source completion',()=>{const run=app();run("nodes=[node('machine','Single',0,0,{ct:120})];links=[];resetSim();for(let i=0;i<10;i++)step(.1)");assert.equal(run('completed'),0);run('for(let i=0;i<30;i++)step(.1)');assert.ok(run('completed')>0);assert.ok(run('leadTotal/leadCount')>=1.9)});
+test('report then text generation restores generator action',()=>{const run=app();run('showReport();showText()');assert.equal(run("$('modal-action').onclick===buildFromText"),true);assert.equal(run("$('modal-action').textContent"),'Generate Editable Layout')});
+test('text parser recognizes counts and cycle times',()=>{const run=app();run("$('prompt').value='Boarding 6 machines, WIP, Packing 4 tables, Dispatch. Boarding cycle time 60 seconds. Packing cycle time 90 seconds.';buildFromText()");assert.equal(run('nodes.length'),4);assert.equal(run('nodes[2].ct'),90);assert.equal(run('nodes[0].count'),6)});
+test('validation rejects corrupt projects before altering existing model',()=>{const run=app();assert.throws(()=>run("applyProject({version:1,nodes:[{id:1}],links:[]})"));assert.equal(run('nodes.length'),4);run('const d=projectData();d.links[0].to=999');assert.throws(()=>run('applyProject(d)'));assert.equal(run('nodes.length'),4)});
+test('project roundtrip preserves operating parameters',()=>{const run=app();const before=run('JSON.stringify(projectData())');run('applyProject(projectData())');assert.equal(run('JSON.stringify(projectData())'),before)});
+test('shift stops at requested duration',()=>{const run=app();run("$('shift').value='.1';for(let i=0;i<100;i++)step(.1)");assert.ok(Math.abs(run('simTime')-6)<1e-8)});

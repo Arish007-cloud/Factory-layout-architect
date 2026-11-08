@@ -1,0 +1,7 @@
+{
+  "name": "factory-layout-architect",
+  "version": "2.0.0",
+  "private": true,
+  "scripts": {"test": "node --test tests/*.test.cjs", "start": "node server.cjs", "build": "node build.cjs", "deploy": "npm test && npm run build && npx -y firebase-tools@latest deploy --only hosting --project factory-layout-architech"},
+  "engines": {"node": ">=22"}
+}
