@@ -4,7 +4,7 @@ A browser-based factory layout editor and deterministic flow simulator. No insta
 
 ## Features
 
-- Lower knitting expansion: a horizontal aisle below the fourth right-side cell joins the shared central aisle. Beneath it, inverted knitting lines 9, 10, 11, and 12 run from screen-right to screen-left. Their dashed downward outlets are pending future cells and are excluded from existing simulation routes. A dedicated lower-row view includes the last existing cell, new aisle, and new knitting machines.
+- Lower inverted cost centre: a horizontal aisle below the fourth original right-side cell joins the shared central aisle. Four additional processing/boarding/packing/completion-pallet cells sit below that aisle and above knitting lines 9–12. Those knitting lines run right-to-left with inverted machine symbols; material travels upward along the central aisle to their dedicated cells. The original upper six cells remain independent. A lower-cost-centre overview and four individual-cell views show the new area. Stock scenarios apply to the upper stock areas; the lower cost centre supplies its cells directly and completes output on their individual pallets.
 
 - The lines 1–4 cost centre has two processing/boarding/packing sets; the lines 5–8 cost centre has four sets. Each of the six cells has its own completion pallet immediately after packing. The eight knitting lines and six unassorted/short-carton/leftover locations are retained. Short-carton and leftover routes continue from each cell's completion pallet through the aisle. The floor extends downward, with whole-floor, cost-centre, top-floor, and individual-cell views. Six simultaneous looping flows illustrate the six cells.
 

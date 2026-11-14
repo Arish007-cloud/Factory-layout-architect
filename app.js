@@ -24,8 +24,8 @@ function drawParticles(){if(isPlant4()){drawPlantParticles();return;}const pg=$(
  if(!d||d.version!==1||!Array.isArray(d.nodes)||!Array.isArray(d.links)||d.nodes.length>500||d.links.length>1000)throw Error('Unsupported or invalid project format');
  const ids=new Set();const numeric=(v,min,max,label)=>{if(typeof v!=='number'||!Number.isFinite(v)||v<min||v>max)throw Error('Invalid '+label);return v};
  const clean=d.nodes.map(n=>{if(!n||!['machine','station','wip','conveyor'].includes(n.type)||typeof n.name!=='string'||n.name.length>100)throw Error('Invalid object');numeric(n.id,1,1e9,'ID');if(!Number.isInteger(n.id)||ids.has(n.id))throw Error('Duplicate or invalid ID');ids.add(n.id);
- const o={id:n.id,type:n.type,name:n.name};if(n.bank==='left'||n.bank==='right')o.bank=n.bank;if(Number.isInteger(n.cell)&&n.cell>=1&&n.cell<=4)o.cell=n.cell;if(n.zone==='future-knitting')o.zone=n.zone;if(n.orientation===180)o.orientation=180;for(const [k,min,max] of [['x',0,2200],['y',0,2200],['w',10,2200],['h',10,2200],['count',1,10000],['ct',1,86400],['delay',0,100000],['initial',0,1e9],['capacity',0,1e9]])o[k]=numeric(n[k]??(k==='capacity'?0:undefined),min,max,k);
- if(o.x+o.w>(d.nodes.some(n=>n.bank==='left')&&d.nodes.some(n=>n.bank==='right')?2200:1100)||o.y+o.h>(d.nodes.some(n=>n.zone==='future-knitting')?1850:d.nodes.some(n=>n.cell>1)?1500:700))throw Error('Object outside floor');if(o.capacity&&o.initial>o.capacity)throw Error('Initial WIP exceeds capacity');return {...o,qty:0,processed:0,batches:[]}});
+ const o={id:n.id,type:n.type,name:n.name};if(['left','right','lower'].includes(n.bank))o.bank=n.bank;if(Number.isInteger(n.cell)&&n.cell>=1&&n.cell<=4)o.cell=n.cell;if(n.zone==='future-knitting')o.zone=n.zone;if(n.orientation===180)o.orientation=180;for(const [k,min,max] of [['x',0,2200],['y',0,3200],['w',10,2200],['h',10,3200],['count',1,10000],['ct',1,86400],['delay',0,100000],['initial',0,1e9],['capacity',0,1e9]])o[k]=numeric(n[k]??(k==='capacity'?0:undefined),min,max,k);
+ if(o.x+o.w>(d.nodes.some(n=>n.bank==='left')&&d.nodes.some(n=>n.bank==='right')?2200:1100)||o.y+o.h>(d.nodes.some(n=>n.bank==='lower')?2900:d.nodes.some(n=>n.zone==='future-knitting')?1850:d.nodes.some(n=>n.cell>1)?1500:700))throw Error('Object outside floor');if(o.capacity&&o.initial>o.capacity)throw Error('Initial WIP exceeds capacity');return {...o,qty:0,processed:0,batches:[]}});
  const edges=new Set();const routes=d.links.map(l=>{if(!ids.has(l.from)||!ids.has(l.to)||l.from===l.to||edges.has(l.from+':'+l.to))throw Error('Invalid or duplicate route');edges.add(l.from+':'+l.to);return {from:l.from,to:l.to}});
  const shift=Number(d.shift),transport=Number(d.transport);numeric(shift,.1,24,'shift');numeric(transport,1,100000,'transport');return {version:1,plantScenario:Number.isInteger(d.plantScenario)&&d.plantScenario>=1&&d.plantScenario<=4?d.plantScenario:1,nodes:clean,links:routes,shift,transport};
 }
@@ -139,10 +139,10 @@ function loadPlant4Base(){nextId=1;nodes=[
  node('wip','Complete carton',215,510,{w:130,h:110,initial:0,capacity:100})
  ];$('shift').value=8;$('transport').value=20;$('speed').value=.3;selected=null;selectPlantRoute(1);properties()}
 function selectPlantRoute(s){const resumePlayback=flowPlayback.active;plantScenario=s;if(!isPlant4()){loadPlant4();plantScenario=s}links=[];
- for(const bank of isExpandedPlant()?['left','right']:[null]){const subset=nodes.filter(n=>!bank||n.bank===bank),sources=subset.filter(n=>/^Knitting line/.test(n.name)&&n.zone!=='future-knitting'),stock=name=>subset.find(n=>plantRole(n)===name&&!n.cell),dryers=subset.filter(n=>plantRole(n)==='Triveneta dryer');
-  if(s===2){for(const n of sources)links.push({from:n.id,to:stock('Unassorted area').id});for(const d of dryers)links.push({from:stock('Unassorted area').id,to:d.id})}
+ for(const bank of isExpandedPlant()?(nodes.some(n=>n.bank==='lower')?['left','right','lower']:['left','right']):[null]){const subset=nodes.filter(n=>!bank||n.bank===bank),sources=subset.filter(n=>/^Knitting line/.test(n.name)&&n.zone!=='future-knitting'),stock=name=>subset.find(n=>plantRole(n)===name&&!n.cell),dryers=subset.filter(n=>plantRole(n)==='Triveneta dryer');
+  if(s===2&&stock('Unassorted area')){for(const n of sources)links.push({from:n.id,to:stock('Unassorted area').id});for(const d of dryers)links.push({from:stock('Unassorted area').id,to:d.id})}
   else for(const n of sources)for(const d of dryers)links.push({from:n.id,to:d.id});
-  for(const d of dryers){const cell=d.cell||1,find=role=>subset.find(n=>plantRole(n)===role&&(n.cell||1)===cell),boarding=find('HS Ghibli'),packing=find('Packing table'),carton=find('Complete carton');links.push({from:d.id,to:boarding.id},{from:boarding.id,to:packing.id},{from:packing.id,to:carton.id});if(s===3)links.push({from:carton.id,to:stock('Short cartons').id});if(s===4&&!links.some(l=>l.from===carton.id&&l.to===stock('Leftover rack').id))links.push({from:carton.id,to:stock('Leftover rack').id});carton.delay=s===4?30:0}
+  for(const d of dryers){const cell=d.cell||1,find=role=>subset.find(n=>plantRole(n)===role&&(n.cell||1)===cell),boarding=find('HS Ghibli'),packing=find('Packing table'),carton=find('Complete carton');links.push({from:d.id,to:boarding.id},{from:boarding.id,to:packing.id},{from:packing.id,to:carton.id});if(s===3&&stock('Short cartons'))links.push({from:carton.id,to:stock('Short cartons').id});if(s===4&&stock('Leftover rack')&&!links.some(l=>l.from===carton.id&&l.to===stock('Leftover rack').id))links.push({from:carton.id,to:stock('Leftover rack').id});carton.delay=s===4&&stock('Leftover rack')?30:0}
  }selected=null;properties();resetSim();persist();if(resumePlayback)toggleFlowPlayback()}
 function plantColor(){return ['#1687c4','#ec8b23','#647787','#9b58d4'][plantScenario-1]||'#1687c4'}
 function pathLength(points){let d=0;for(let i=1;i<points.length;i++)d+=Math.hypot(points[i].x-points[i-1].x,points[i].y-points[i-1].y);return d}
@@ -221,7 +221,7 @@ function updatePlantActivity(){const el=$('plant-activity');if(!el)return;const 
 function dispatchPlantStock(){if(!isPlant4())return;const sinks=nodes.filter(n=>n.type==='wip'&&links.some(l=>l.to===n.id)&&!links.some(l=>l.from===n.id));for(const n of sinks){plantDispatched+=n.qty;n.qty=0;n.batches=[]}render();drawParticles()}
 
 function stopFlowPlayback(){if(!flowPlayback)return;clearInterval(flowPlayback.timer);flowPlayback.active=false;flowPlayback.timer=null;flowPlayback.elapsed=0;const overlay=$('walk-overlay');if(overlay)overlay.replaceChildren();if($('flow-play'))$('flow-play').textContent='▶ Play flow continuously'}
-function flowTimeline(bank,cell=1){const source=nodes.filter(n=>/^Knitting line/.test(n.name)&&n.zone!=='future-knitting'&&(!bank||n.bank===bank)).sort((a,b)=>a.name.localeCompare(b.name))[(cell-1)%4];if(!source)return {stages:[],total:0};let current=source,elapsed=0;const stages=[],seen=new Set();
+function flowTimeline(bank,cell=1){const source=nodes.filter(n=>/^Knitting line/.test(n.name)&&n.zone!=='future-knitting'&&(!bank||n.bank===bank)).sort((a,b)=>Number(a.name.match(/\d+$/)[0])-Number(b.name.match(/\d+$/)[0]))[(cell-1)%4];if(!source)return {stages:[],total:0};let current=source,elapsed=0;const stages=[],seen=new Set();
  while(!seen.has(current.id)){seen.add(current.id);const choices=links.filter(l=>l.from===current.id),link=choices.find(l=>nodes.find(n=>n.id===l.to)?.cell===cell)||choices.find(l=>!nodes.find(n=>n.id===l.to)?.cell)||choices[0];if(!link)break;const target=nodes.find(n=>n.id===link.to);if(!target)break;const points=plantRoutePoints(current,target),length=pathLength(points),duration=Math.max(1800,Math.min(9500,length/120*1000));stages.push({kind:'move',from:current,to:target,points,start:elapsed,duration});elapsed+=duration;
  const hold=target.delay?2800:1200;stages.push({kind:'hold',from:target,to:target,points:[xy(target)],start:elapsed,duration:hold});elapsed+=hold;current=target;
  }return {stages,total:elapsed};
@@ -243,9 +243,15 @@ function isExpandedPlant(){return nodes.some(n=>n.bank==='left')&&nodes.some(n=>
 function worldWidth(){return isExpandedPlant()?2200:1100}
 function loadPlant4(){stopFlowPlayback();loadPlant4Base();const right=nodes.map(n=>({...n,x:n.x+950,bank:'right'}));const roles=['Triveneta dryer','HS Ghibli','Packing table','Complete carton'];const left=right.map(n=>({...n,id:nextId++,x:roles.includes(n.name)?n.x-950:2200-n.x-n.w,name:/^Knitting line/.test(n.name)?'Knitting line '+(9-Number(n.name.match(/\d+$/)[0])):n.name,bank:'left',batches:[]}));nodes=[...left,...right];
  for(const bank of ['left','right']){const first=nodes.filter(n=>n.bank===bank&&roles.includes(n.name));first.forEach(n=>n.cell=1);for(let cell=2;cell<=(bank==='left'?2:4);cell++)for(const n of first)nodes.push({...n,id:nextId++,name:n.name+' · Set '+cell,y:n.y+(cell-1)*260,cell,batches:[],qty:0,processed:0})}
- for(let line=9;line<=12;line++)nodes.push(node('machine','Knitting line '+line,1805-(line-9)*215,1540,{w:180,h:172,count:2,ct:180,capacity:20,bank:'right',zone:'future-knitting',orientation:180}));
+ for(let line=9;line<=12;line++)nodes.push(node('machine','Knitting line '+line,1805-(line-9)*215,2600,{w:180,h:172,count:2,ct:180,capacity:20,bank:'lower',orientation:180}));
+ const lowerTemplate=nodes.filter(n=>n.bank==='right'&&n.cell===1);for(let cell=1;cell<=4;cell++)for(const n of lowerTemplate)nodes.push({...n,id:nextId++,name:plantRole(n)+' · Set '+cell,y:n.y+1060+(cell-1)*260,bank:'lower',cell,batches:[],qty:0,processed:0});
  plantView='overview';selectPlantRoute(1);properties()}
 function plantRoutePoints(a,b){if(!isExpandedPlant())return plantLocalRoutePoints(a,b);const p=xy(a),q=xy(b),P=(x,y)=>({x,y}),role=plantRole(a),targetRole=plantRole(b),feed=425+((b.cell||1)-1)*260;
+ if(a.bank==='lower'){
+  if(/^Knitting line/.test(a.name)){const lane=1734+((b.cell||1)-1)*260;return [P(p.x,a.y),P(p.x,2514),P(1100,2514),P(1100,lane),P(q.x,lane),P(q.x,b.y+b.h)]}
+  if(role==='Triveneta dryer'||role==='HS Ghibli')return [P(a.x,p.y),P(b.x+b.w,p.y),P(b.x+b.w,q.y)];
+  if(role==='Packing table'&&targetRole==='Complete carton')return [P(a.x,p.y),P(b.x+b.w,q.y)];
+ }
  if(/^Knitting line/.test(a.name))return [P(p.x,a.y+a.h),P(p.x,250),P(1100,250),P(1100,feed),P(q.x,feed),P(q.x,b.type==='wip'?b.y+b.h:b.y)];
  if(role==='Unassorted area')return [P(p.x,a.y+a.h),P(p.x,425),P(1100,425),P(1100,feed),P(q.x,feed),P(q.x,b.y)];
  if(role==='Triveneta dryer'||role==='HS Ghibli')return [P(a.x,p.y),P(b.x+b.w,p.y),P(b.x+b.w,q.y)];
@@ -253,7 +259,7 @@ function plantRoutePoints(a,b){if(!isExpandedPlant())return plantLocalRoutePoint
  if(role==='Packing table'||role==='Complete carton'){const lane=425+((a.cell||1)-1)*260;return [P(p.x,a.y),P(p.x,lane),P(1100,lane),P(1100,425),P(q.x,425),P(q.x,b.y+b.h)]}
  return [p,q];}
 function setPlantView(v){plantView=v;applyPlantView()}
-function applyPlantView(){let box='0 0 1100 700';if(isExpandedPlant()){const cell=/^cell-(left|right)-(\d)$/.exec(plantView);box=cell?(cell[1]==='left'?135:1035)+' '+(450+(Number(cell[2])-1)*260)+' 1030 210':plantView==='left'?'135 0 1030 1000':plantView==='right'?'1035 0 1030 '+worldHeight():plantView==='lower'?'1035 1180 1030 660':plantView==='top'?'150 0 1900 700':'150 0 1900 '+worldHeight()}$('floor').setAttribute('viewBox',box)}
+function applyPlantView(){let box='0 0 1100 700';if(isExpandedPlant()){const cell=/^cell-(left|right|lower)-(\d)$/.exec(plantView);box=cell?(cell[1]==='left'?135:1035)+' '+((cell[1]==='lower'?1510:450)+(Number(cell[2])-1)*260)+' 1030 210':plantView==='left'?'135 0 1030 1000':plantView==='right'?'1035 0 1030 '+worldHeight():plantView==='lower'?'1035 2300 1030 590':plantView==='lower-cells'?'1035 1440 1030 1450':plantView==='top'?'150 0 1900 700':'150 0 1900 '+worldHeight()}$('floor').setAttribute('viewBox',box)}
 function drawExpandedPlantBuilding(b){
  $('floor-title').textContent='PLANT 4 · LINES 1–8 + LOWER KNITTING 9–12';
  el('rect',{x:166,y:16,width:1868,height:worldHeight()-32,rx:4,fill:'#f4f5f4',stroke:'#465c70','stroke-width':5},b);
@@ -264,16 +270,16 @@ function drawExpandedPlantBuilding(b){
  }
  for(const bank of ['left','right']){const x=bank==='left'?200:1145,total=bank==='left'?2:4;for(let cell=1;cell<=total;cell++){const offset=(cell-1)*260;plantText(b,x+427,468+offset,(bank==='left'?'COST CENTRE 1–4':'COST CENTRE 5–8')+' · PROCESS / BOARD / PACK · SET '+cell,13,'#375c74',800);if(cell>1){el('rect',{x,y:401+offset,width:855,height:48,fill:'#ffe774'},b);el('path',{d:'M'+x+' '+(405+offset)+'H'+(x+855)+'M'+x+' '+(445+offset)+'H'+(x+855),stroke:'#c99425','stroke-width':2,'stroke-dasharray':'9 6'},b)}}}
  el('rect',{x:1070,y:45,width:60,height:worldHeight()-90,fill:'#ffe774'},b);el('path',{d:'M1075 48V'+(worldHeight()-50)+'M1125 48V'+(worldHeight()-50),stroke:'#c99425','stroke-width':2,'stroke-dasharray':'9 6'},b);const t=el('text',{x:1104,y:320,transform:'rotate(-90 1104 320)','text-anchor':'middle','font-size':13,'font-weight':800,fill:'#6d5921'},b);t.textContent='SHARED CENTRAL AISLE · ENTRANCE / EXIT';
- if(nodes.some(n=>n.zone==='future-knitting')){
+ if(nodes.some(n=>n.bank==='lower')){
   el('rect',{x:1070,y:1460,width:930,height:50,fill:'#ffe774'},b);el('path',{d:'M1075 1464H1995M1075 1506H1995',stroke:'#c99425','stroke-width':2,'stroke-dasharray':'9 6'},b);plantText(b,1560,1490,'HORIZONTAL MATERIAL AISLE → SHARED CENTRAL AISLE',13,'#6a531c',800);
-  el('rect',{x:1145,y:1520,width:855,height:212,fill:'#e7eff5',stroke:'#b5c7d6'},b);plantText(b,1570,1533,'INVERTED KNITTING ROW · RIGHT TO LEFT: 9 → 10 → 11 → 12',12,'#173950',800);
-  for(const n of nodes.filter(n=>n.zone==='future-knitting')){const p=xy(n);el('path',{d:'M'+p.x+' '+(n.y+n.h)+'V1795',fill:'none',stroke:'#90a6b5','stroke-width':3,'stroke-dasharray':'7 5'},b);el('path',{d:'M'+(p.x-6)+' 1787L'+p.x+' 1797L'+(p.x+6)+' 1787',fill:'none',stroke:'#90a6b5','stroke-width':2},b)}
-  plantText(b,1570,1822,'PENDING CONNECTIONS · FUTURE PROCESSING / BOARDING / PACKING CELLS BELOW',12,'#738b9c',700);
+  for(let cell=1;cell<=4;cell++){const y=1734+(cell-1)*260;el('rect',{x:1145,y:y-24,width:855,height:48,fill:'#ffe774'},b);el('path',{d:'M1145 '+(y-20)+'H2000M1145 '+(y+20)+'H2000',stroke:'#c99425','stroke-width':2,'stroke-dasharray':'9 6'},b);plantText(b,1570,1528+(cell-1)*260,'COST CENTRE 9–12 · INVERTED SUPPLY · CELL '+cell,14,'#375c74',800)}
+  el('rect',{x:1145,y:2580,width:855,height:212,fill:'#e7eff5',stroke:'#b5c7d6'},b);plantText(b,1570,2593,'INVERTED KNITTING ROW · RIGHT TO LEFT: 9 → 10 → 11 → 12',12,'#173950',800);
+  plantText(b,1570,2840,'MATERIAL FLOWS UPWARD TO FOUR PROCESS / BOARD / PACK / PALLET CELLS',13,'#375c74',800);
  }
  if(worldHeight()>700){el('rect',{x:200,y:960,width:855,height:Math.max(475,worldHeight()-1025),rx:6,fill:'#edf0f1',stroke:'#c9d2d8','stroke-dasharray':'10 7'},b);plantText(b,627,1180,'OPEN FLOOR / RESERVED SPACE',18,'#8c9ca6',700)}
 
 }
 
 function plantRole(n){return String(n.name).split(' · Set ')[0]}
-function worldHeight(){return nodes.some(n=>n.zone==='future-knitting')?1850:isExpandedPlant()&&nodes.some(n=>n.cell>1)?1500:700}
+function worldHeight(){return nodes.some(n=>n.bank==='lower')?2900:nodes.some(n=>n.zone==='future-knitting')?1850:isExpandedPlant()&&nodes.some(n=>n.cell>1)?1500:700}
 function flowStreams(){if(!isExpandedPlant())return [{bank:null,cell:1}];return nodes.filter(n=>plantRole(n)==='Triveneta dryer').map(n=>({bank:n.bank,cell:n.cell||1}))}
